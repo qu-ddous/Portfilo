@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans antialiased;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.04) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.04) 0px, transparent 50%);
+    min-height: 100vh;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+
+  /* ─── Premium Glass Card ─────────────────────────── */
+  .glass-card {
+    @apply bg-white border border-slate-200/70 rounded-3xl shadow-lg shadow-slate-200/60 overflow-hidden;
+    transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .glass-card:hover {
+    @apply border-emerald-200;
+    transform: translateY(-4px) scale(1.005);
+    box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.1);
+  }
+
+  /* ─── Animated Navigation Shell (Sidebar / Header) ─ */
+  .nav-shell {
+    background: linear-gradient(160deg, #0f172a 0%, #1a2744 60%, #0f172a 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .nav-shell::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+    animation: rotate 25s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  /* ─── Primary Button ─────────────────────────────── */
+  .btn-primary {
+    @apply relative px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold transition-all duration-300 shadow-xl shadow-emerald-500/20 active:scale-95 overflow-hidden cursor-pointer;
+  }
+
+  .btn-primary::after {
+    content: '';
+    @apply absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent;
+    transform: skewX(-25deg);
+    transition: left 0.8s ease;
+  }
+
+  .btn-primary:hover::after {
+    left: 100%;
+  }
+
+  /* ─── Secondary Button ───────────────────────────── */
+  .btn-secondary {
+    @apply relative px-5 py-2.5 bg-white border border-slate-200 hover:border-emerald-400 text-slate-700 hover:text-emerald-700 rounded-2xl font-semibold text-sm transition-all duration-300 shadow-sm hover:shadow-emerald-100 active:scale-95 cursor-pointer;
+  }
+
+  .btn-secondary:hover {
+    @apply bg-emerald-50;
+  }
+
+  /* ─── Premium Inputs ─────────────────────────────── */
+  .input-field {
+    @apply w-full bg-slate-100/60 border border-slate-200 rounded-2xl px-5 py-3.5 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all duration-300 text-slate-800 placeholder-slate-400;
+  }
+
+  /* ─── Sidebar Animated Links ─────────────────────── */
+  .sidebar-link {
+    @apply flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-300 text-slate-400 font-medium cursor-pointer;
+  }
+
+  .sidebar-link.active {
+    @apply text-white bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-xl shadow-emerald-600/30 ring-1 ring-emerald-400/30;
+  }
+
+  .sidebar-link:not(.active):hover {
+    @apply text-white bg-white/10;
+    transform: translateX(4px);
+  }
+
+  /* ─── Shimmer Skeleton Loader ────────────────────── */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      #f1f5f9 25%,
+      #e2e8f0 50%,
+      #f1f5f9 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmerAnim 1.6s infinite;
+    @apply rounded-xl;
+  }
+
+  @keyframes shimmerAnim {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+
+  /* ─── Badge Utility ──────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold;
+  }
+  .badge-green  { @apply bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200; }
+  .badge-blue   { @apply bg-blue-100 text-blue-700 ring-1 ring-blue-200; }
+  .badge-red    { @apply bg-red-100 text-red-700 ring-1 ring-red-200; }
+  .badge-orange { @apply bg-orange-100 text-orange-700 ring-1 ring-orange-200; }
+  .badge-gray   { @apply bg-slate-100 text-slate-600 ring-1 ring-slate-200; }
+}
+
+/* ─── Custom Scrollbar ───────────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 99px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #10b981;
+}
+
+/* Global scrollbar */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #f8fafc; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+
+/* ─── Emotional Micro-Animations ────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes hue-rotate {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+
+@keyframes glow {
+  0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
+  50% { filter: drop-shadow(0 0 15px currentColor); }
+}
+
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-breathe { animation: breathe 4s ease-in-out infinite; }
+.animate-hue { animation: hue-rotate 10s linear infinite; }
+.animate-sway { animation: sway 3s ease-in-out infinite; }
+.animate-glow { animation: glow 2s ease-in-out infinite; }
+.animate-shimmer-fast {
+  position: relative;
+  overflow: hidden;
+}
+.animate-shimmer-fast::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2.5s infinite;
+}
