@@ -1,0 +1,236 @@
+{
+  "info": {
+    "_postman_id": "bloodbank-donors-api-collection",
+    "name": "Blood Bank - Donors API Tests",
+    "description": "Complete test collection for Donors API endpoints - GET and PUT operations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. GET - Retrieve All Donors",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_AUTH_TOKEN_HERE",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/donors",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "donors"
+          ]
+        },
+        "description": "Retrieve all donors in the system (Admin/Staff only)\n\nRole Required: admin, staff\n\nResponse:\n- Returns array of all donor records with user details (name, email, phone)\n- Includes: id, user_id, blood_type, age, weight, is_eligible, created_at, updated_at"
+      },
+      "response": []
+    },
+    {
+      "name": "2. GET - Retrieve Specific Donor by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_AUTH_TOKEN_HERE",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/donors/550e8400-e29b-41d4-a716-446655440000",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "donors",
+            "550e8400-e29b-41d4-a716-446655440000"
+          ]
+        },
+        "description": "Retrieve a specific donor by their ID\n\nParameters:\n- id (path): Donor UUID\n\nResponse:\n- Single donor object with flattened user details\n- Includes name, email, phone from user table"
+      },
+      "response": []
+    },
+    {
+      "name": "3. GET - Retrieve Current Donor Profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_AUTH_TOKEN_HERE",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/donors/me",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "donors",
+            "me"
+          ]
+        },
+        "description": "Retrieve the logged-in donor's own profile\n\nAuthentication: Required (uses current user's token)\n\nResponse:\n- Returns current donor's profile data\n- No ID parameter needed - uses authenticated user ID"
+      },
+      "response": []
+    },
+    {
+      "name": "4. PUT - Update Donor Information",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_AUTH_TOKEN_HERE",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Ahmed Hassan\",\n  \"phone\": \"+92-300-1234567\",\n  \"blood_type\": \"O+\",\n  \"age\": 30,\n  \"weight\": 75,\n  \"is_eligible\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/donors/550e8400-e29b-41d4-a716-446655440000",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "donors",
+            "550e8400-e29b-41d4-a716-446655440000"
+          ]
+        },
+        "description": "Update donor information (Admin/Staff only)\n\nParameters:\n- id (path): Donor UUID\n\nBody (all fields optional):\n- name: string\n- phone: string\n- blood_type: string (A+, A-, B+, B-, AB+, AB-, O+, O-)\n- age: integer (minimum 18)\n- weight: integer (minimum 50 kg)\n- is_eligible: boolean\n\nResponse:\n- Updated donor object\n- Also updates user record if name/phone provided"
+      },
+      "response": []
+    },
+    {
+      "name": "5. PUT - Update Only Blood Type",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_AUTH_TOKEN_HERE",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"blood_type\": \"AB+\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/donors/550e8400-e29b-41d4-a716-446655440000",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "donors",
+            "550e8400-e29b-41d4-a716-446655440000"
+          ]
+        },
+        "description": "Example: Update only blood type (partial update)\n\nNote: PUT request allows partial updates - you don't need to send all fields"
+      },
+      "response": []
+    },
+    {
+      "name": "6. PUT - Update Eligibility Status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_AUTH_TOKEN_HERE",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_eligible\": false\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/donors/550e8400-e29b-41d4-a716-446655440000",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5000",
+          "path": [
+            "api",
+            "donors",
+            "550e8400-e29b-41d4-a716-446655440000"
+          ]
+        },
+        "description": "Example: Mark donor as ineligible (e.g., due to health reasons)\n\nCommon usage: Staff updates donor eligibility after health checkup"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "YOUR_AUTH_TOKEN_HERE",
+      "type": "string"
+    },
+    {
+      "key": "donor_id",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    }
+  ]
+}

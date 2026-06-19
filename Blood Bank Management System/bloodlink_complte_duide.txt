@@ -1,0 +1,933 @@
+BloodLink
+Blood Bank Management System
+Complete Development Guide — All Phases + Prompts
+
+Tech Stack
+Layer	Technology
+Frontend	React 18 + Vite
+Styling	Tailwind CSS v3
+UI Library	ShadCN UI
+Backend	Node.js + Express
+Database	Supabase (PostgreSQL)
+Auth	Supabase Auth (JWT)
+State	Zustand
+Charts	Recharts
+PDF	jsPDF + html2canvas
+Forms	react-hook-form + zod
+HTTP	Axios
+Routing	React Router v6
+Animations	Framer Motion
+Toasts	ShadCN Sonner
+
+Color Scheme
+Token	Hex Value	Usage
+Primary	#C0392B	Buttons, active nav, accents
+Primary Light	#E74C3C	Hover states
+Background	#F8F9FA	Page background
+Card BG	#FFFFFF	Card backgrounds
+Text Primary	#2C3E50	Main text
+Text Muted	#7F8C8D	Secondary text
+Border	#E5E7EB	Borders, dividers
+Success	#27AE60	Approved, eligible
+Warning	#F39C12	Low stock, caution
+Danger	#E74C3C	Critical, rejected
+Info	#2980B9	Normal urgency
+
+Roles & Permissions
+Admin
+•	Full access to all pages and data
+•	Create and delete staff accounts
+•	View all reports and analytics
+•	Manage inventory, donors, patients, requests
+Staff / Technician
+•	Register new donors
+•	Record donations and enter test results
+•	Manage blood requests (approve/reject/fulfill)
+•	Cannot access admin settings or reports
+Donor
+•	View own profile and donation history
+•	Download donation certificate (PDF)
+•	See next eligible donation date
+Patient
+•	Submit blood requests
+•	Track own request status
+•	Cannot see other patients' data
+
+Environment Setup (One Time — Phase 1)
+Frontend .env file (project root):
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_API_BASE_URL=http://localhost:5000
+
+Backend .env file (backend/ folder):
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_KEY=your_service_role_key
+PORT=5000
+
+Rules:
+•	Add .env to .gitignore — NEVER push to Git
+•	Create .env.example with empty values — push this instead
+•	Use VITE_ prefix for all frontend env variables
+
+Global Rules — Apply Every Phase
+After Every Phase: Test
+•	App runs without errors?
+•	Feature working as expected?
+•	No console errors in browser?
+•	Mobile (375px) responsive?
+
+After Every Phase: Git Commit
+git add .
+git commit -m "Phase X: [description] complete"
+
+Never commit broken code. Fix first, then commit.
+
+Folder Structure
+src/
+├── api/
+│   ├── axiosInstance.js    ← base URL + JWT header auto-attach
+│   ├── auth.js
+│   ├── donors.js
+│   ├── donations.js
+│   ├── inventory.js
+│   ├── requests.js
+│   └── reports.js
+│
+├── components/
+│   ├── ui/                 ← reusable base components
+│   │   ├── Button.jsx
+│   │   ├── Input.jsx
+│   │   ├── Modal.jsx
+│   │   ├── Table.jsx
+│   │   ├── Card.jsx
+│   │   ├── Badge.jsx
+│   │   ├── Alert.jsx
+│   │   ├── Skeleton.jsx
+│   │   ├── EmptyState.jsx
+│   │   ├── PageLoader.jsx
+│   │   └── ErrorBoundary.jsx
+│   ├── layout/
+│   │   ├── AdminLayout.jsx
+│   │   ├── StaffLayout.jsx
+│   │   ├── DonorLayout.jsx
+│   │   ├── PatientLayout.jsx
+│   │   ├── PublicLayout.jsx
+│   │   ├── Sidebar.jsx
+│   │   └── Topbar.jsx
+│   └── shared/
+│       ├── StatCard.jsx
+│       ├── DataTable.jsx
+│       ├── ConfirmDialog.jsx
+│       ├── BloodTypeBadge.jsx
+│       └── NotificationBell.jsx
+│
+├── pages/
+│   ├── public/   → Landing, Login, Signup
+│   ├── admin/    → Dashboard, Donors, Patients, Staff,
+│   │               Inventory, Requests, Reports, Settings
+│   ├── staff/    → Dashboard, RegisterDonor, RecordDonation,
+│   │               TestResults, ManageRequests
+│   ├── donor/    → Dashboard, DonationHistory, Certificate, Profile
+│   └── patient/  → Dashboard, SubmitRequest, TrackRequest, Profile
+│
+├── store/
+│   ├── authStore.js         ← user, role, token, isAuthenticated
+│   ├── inventoryStore.js    ← inventory[], lowStockTypes[]
+│   └── notificationStore.js ← notifications[], unreadCount
+│
+├── hooks/
+│   ├── useAuth.js
+│   ├── useDonors.js
+│   ├── useInventory.js
+│   └── useRequests.js
+│
+├── utils/
+│   ├── formatDate.js
+│   ├── calculateExpiry.js
+│   ├── exportCSV.js
+│   └── generatePDF.js
+│
+├── routes/
+│   └── AppRouter.jsx
+│
+└── constants/
+    ├── bloodTypes.js   → ['A+','A-','B+','B-','AB+','AB-','O+','O-']
+    ├── roles.js
+    └── statusColors.js
+
+Database Tables (Supabase)
+Table	Key Columns
+users	id, name, email, role, phone, created_at
+donors	id, user_id, blood_type, age, weight, last_donation, next_eligible_date, is_eligible
+donations	id, donor_id, date, blood_type, units, test_status, notes
+blood_inventory	id, blood_type, units, collection_date, expiry_date, status
+patients	id, user_id, blood_type, medical_condition
+blood_requests	id, patient_id, blood_type, units, urgency, condition, required_date, status, rejection_reason
+staff	id, user_id, department, shift
+notifications	id, user_id, message, is_read, created_at
+
+RLS Policies
+•	donors — can only read/edit their own row
+•	patients — can only read/edit their own row
+•	staff — read access to donors, donations, requests
+•	admin — full access to all tables
+
+API Response Format (All Endpoints)
+Success
+{ "success": true, "message": "Done", "data": { ... } }
+Success with Pagination
+{ "success": true, "data": [...],
+  "pagination": { "total": 100, "page": 1, "limit": 10, "totalPages": 10 } }
+Error
+{ "success": false, "message": "Not found", "error": "NOT_FOUND" }
+Validation Error
+{ "success": false, "message": "Validation failed",
+  "errors": [{ "field": "email", "message": "Invalid email" }] }
+
+HTTP Code	Meaning
+200	Success
+201	Created
+400	Bad request / validation error
+401	Not authenticated
+403	Not authorized (wrong role)
+404	Not found
+500	Server error
+
+Navigation Flow
+•	User visits / → Landing Page
+•	Clicks Login → /login
+•	On success → fetch role from users table → store in Zustand authStore
+•	Redirect by role:
+◦	admin → /admin/dashboard
+◦	staff → /staff/dashboard
+◦	donor → /donor/dashboard
+◦	patient → /patient/dashboard
+•	Protected routes: no token → /login | wrong role → own dashboard
+•	Logout: clear Zustand + Supabase session → /login
+•	Signup: only donor/patient can self-register → email verify → login
+
+Zustand State Management
+authStore.js
+user: { id, name, email, role }
+token: string
+isAuthenticated: boolean
+setUser(user) | clearUser()
+Persist: localStorage
+inventoryStore.js
+inventory: []
+lowStockTypes: []   ← blood types below 5 units
+fetchInventory()    ← GET /api/inventory
+updateStock(id, units)
+notificationStore.js
+notifications: []
+unreadCount: 0
+fetchNotifications()  ← GET /api/notifications
+markAsRead(id)
+Poll every 30 seconds: setInterval(fetchNotifications, 30000)
+
+Reusable Component Specs
+Component	Key Props	Notes
+Button	variant, size, loading, disabled, onClick, icon	primary|secondary|danger|ghost|outline — sm|md|lg
+Input	label, placeholder, error, register, type	Error shown below in red. Label always above.
+Modal	isOpen, onClose, title, children, footer, size	ESC closes. Backdrop click closes. Scrollable body.
+Badge	variant, children	success|warning|danger|info|neutral — rounded-full
+Alert	variant, message, dismissible	Icon + message. X button if dismissible.
+Skeleton	width, height, rounded	Animate pulse. Match real content shape.
+EmptyState	icon, title, subtitle, action	Centered. Muted. Optional action button.
+PageLoader	—	Full screen centered red spinner.
+StatCard	title, value, icon, trend, color	Left border 4px solid color. Trend arrow up/down.
+DataTable	columns, data, loading, emptyMessage, searchable	Sort, pagination 10/page, skeleton loading.
+ConfirmDialog	isOpen, onConfirm, onCancel, title, message	Confirm (red) | Cancel (gray). Before any delete.
+BloodTypeBadge	type	Each blood type unique color badge.
+NotificationBell	—	Unread count badge. Dropdown. Mark as read.
+ErrorBoundary	children	Catches crashes. Shows fallback UI + Reload button.
+
+
+DEVELOPMENT PHASES
+
+  PHASE 1 — Project Setup + Database  
+
+Prompt to give AI:
+Build a Blood Bank Management System using React 18 + Vite,
+Tailwind CSS v3, ShadCN UI, Node.js + Express, Supabase.
+
+Do this setup:
+1. Vite + React project with Tailwind and ShadCN configured
+2. React Router v6, Zustand, Axios installed
+3. Create this folder structure:
+   src/api/ | components/ui/ | components/layout/ | components/shared/
+   pages/public/ | pages/admin/ | pages/staff/ | pages/donor/ | pages/patient/
+   store/ | hooks/ | utils/ | routes/ | constants/
+4. constants/bloodTypes.js → ['A+','A-','B+','B-','AB+','AB-','O+','O-']
+5. constants/roles.js → ['admin','staff','donor','patient']
+6. constants/statusColors.js → status to color mapping
+7. Supabase project with Auth enabled
+8. Create all 8 tables: users, donors, donations, blood_inventory,
+   patients, blood_requests, staff, notifications
+9. RLS policies per role
+10. src/api/axiosInstance.js: base URL from env, auto JWT header, 401 auto logout
+
+Create .env with:
+  VITE_SUPABASE_URL | VITE_SUPABASE_ANON_KEY | VITE_API_BASE_URL
+Add .env to .gitignore. Create .env.example with empty values.
+
+No UI pages yet. Setup only.
+
+Test Checklist:
+•	npm run dev → app runs on localhost without errors?
+•	Browser console: no errors?
+•	Folder structure created correctly?
+•	Supabase: all 8 tables visible?
+•	constants files export correctly?
+•	.env file exists and NOT in git?
+
+Git:
+git init
+git add .
+git commit -m "Phase 1: Project setup + database complete"
+
+  PHASE 2 — Auth System  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: React 18, Vite, Tailwind v3, ShadCN, Supabase Auth, Zustand, React Router v6
+Phase 1 complete. Now build Auth only:
+
+1. Zustand authStore (src/store/authStore.js):
+   State: user {id,name,email,role}, token, isAuthenticated
+   Actions: setUser(user), clearUser()
+   Persist in localStorage
+
+2. src/api/auth.js:
+   login(email, password) → Supabase Auth
+   signup(email, password, role, extraData)
+   logout()
+   getCurrentUser()
+
+3. Login Page (pages/public/Login.jsx):
+   Center card layout | Fields: Email, Password
+   react-hook-form + zod: email required valid, password min 6
+   Loading state on submit | Error toast on fail
+   On success: fetch role → redirect by role:
+     admin→/admin/dashboard | staff→/staff/dashboard
+     donor→/donor/dashboard | patient→/patient/dashboard
+   Links: Register as Donor | Register as Patient
+
+4. Signup Page (pages/public/Signup.jsx):
+   Step 1: Select role (Donor or Patient) as cards
+   Step 2: Form based on role
+   Common: name, email, password, phone
+   Donor extra: blood_type, age, weight
+   Patient extra: blood_type, medical_condition
+   On success: show email verification message
+
+5. Protected Route component (src/routes/):
+   No token → /login | Wrong role → own dashboard
+
+6. AppRouter.jsx:
+   / → Login (redirect if logged in)
+   /login | /signup → public
+   /admin/* → AdminLayout + protected (admin)
+   /staff/* → StaffLayout + protected (staff)
+   /donor/* → DonorLayout + protected (donor)
+   /patient/* → PatientLayout + protected (patient)
+
+7. useAuth hook (src/hooks/useAuth.js):
+   Returns: user, isAuthenticated, login, logout
+
+Colors: Primary #C0392B | BG #F8F9FA | Text #2C3E50
+
+Test Checklist:
+•	/login page renders correctly?
+•	Wrong credentials → error toast?
+•	Correct login → role-based redirect works?
+•	/admin/dashboard without login → redirects to /login?
+•	Donor logs in → tries /admin → blocked?
+•	Logout → session cleared, back to /login?
+•	Signup → email verification message shown?
+
+Git:
+git add .
+git commit -m "Phase 2: Auth system + protected routes complete"
+
+  PHASE 3 — Reusable Components + ErrorBoundary  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: React 18, Tailwind v3, ShadCN UI
+Phase 1 and 2 complete. Build reusable components only.
+No pages yet.
+
+--- src/components/ui/ ---
+
+1. Button.jsx
+   Variants: primary|secondary|danger|ghost|outline
+   Sizes: sm|md|lg
+   Props: onClick, disabled, loading (spinner), icon, children
+   Primary: bg #C0392B, hover #E74C3C
+
+2. Input.jsx
+   Props: label, placeholder, error, register, type
+   Label above. Error below in red. Red border on error.
+
+3. Modal.jsx
+   Props: isOpen, onClose, title, children, footer, size sm|md|lg
+   Backdrop click + ESC → close. Scrollable if long content.
+
+4. Badge.jsx
+   Variants: success|warning|danger|info|neutral. Rounded-full.
+
+5. Alert.jsx
+   Variants: success|warning|danger|info
+   Icon + message. X button if dismissible prop passed.
+
+6. Skeleton.jsx — animate pulse, props: width, height, rounded
+7. EmptyState.jsx — centered, icon+title+subtitle+optional action button
+8. PageLoader.jsx — full screen centered spinner, color #C0392B
+
+9. ErrorBoundary.jsx (CLASS COMPONENT):
+   State: hasError, error
+   If crash: show 'Something went wrong' + error (dev) + Reload button
+   Wrap in App.jsx: <ErrorBoundary><AppRouter /></ErrorBoundary>
+
+--- src/components/shared/ ---
+
+10. StatCard.jsx
+    Props: title, value, icon, trend, color
+    White bg, shadow, left border 4px solid color
+    Trend: green arrow up | red arrow down
+
+11. DataTable.jsx
+    Props: columns, data, loading, emptyMessage, searchable
+    Search input above | Sort on header click
+    Pagination 10 rows default
+    Loading → Skeleton rows | Empty → EmptyState
+
+12. ConfirmDialog.jsx
+    Props: isOpen, onConfirm, onCancel, title, message
+    Confirm (red) | Cancel (gray)
+
+13. BloodTypeBadge.jsx — unique color per blood type badge
+14. NotificationBell.jsx — unread count badge, dropdown, mark as read
+    Connect to notificationStore
+
+--- src/components/layout/ ---
+
+15. Topbar.jsx: 60px fixed top, white bg
+    Left: hamburger | Center: page title | Right: Bell + avatar dropdown
+
+16. Sidebar.jsx: 240px fixed left
+    Logo top | Nav links middle | User info + logout bottom
+    Active: bg #C0392B white text | Collapsible to 64px
+    Mobile: overlay drawer
+
+17. AdminLayout.jsx: Topbar + Sidebar + main content
+    Admin sidebar links:
+    Dashboard|Donors|Patients|Staff|Inventory|Requests|Reports|Settings
+
+18. StaffLayout.jsx
+    Links: Dashboard|Register Donor|Record Donation|Test Results|Requests
+
+19. DonorLayout.jsx
+    Links: Dashboard|Donation History|Certificate|Profile
+
+20. PatientLayout.jsx
+    Links: Dashboard|Submit Request|Track Request|Profile
+
+21. PublicLayout.jsx: Navbar + Footer, no sidebar
+
+Test Checklist:
+•	Button: all variants + loading state render?
+•	Modal: open/close + ESC + backdrop click work?
+•	DataTable: skeleton loading + empty state + search work?
+•	Sidebar: toggle works? Mobile drawer works?
+•	ErrorBoundary: add throw new Error() to a component → fallback shows?
+•	BloodTypeBadge: all 8 types show correct colors?
+
+Git:
+git add .
+git commit -m "Phase 3: Reusable components + ErrorBoundary complete"
+
+  PHASE 4 — Public Pages (Landing, Login, Signup)  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: React 18, Tailwind v3, ShadCN, Framer Motion
+Phases 1-3 complete. Build public pages now.
+
+1. Landing Page (pages/public/Landing.jsx)
+
+Navbar (from PublicLayout):
+  Logo: red blood drop icon + 'BloodLink' text
+  Links: Home, About, Contact
+  Buttons: Login (outlined #C0392B) | Register (filled #C0392B)
+
+Hero Section:
+  BG: gradient #C0392B → #922B21 | Text: white
+  H1: 'Save Lives, Donate Blood'
+  Subtext: 'Join thousands of donors helping patients in need'
+  Buttons: 'Donate Now' (white filled) | 'Request Blood' (white outlined)
+  Framer Motion: fade in from bottom
+
+Stats Bar:
+  BG: #2C3E50, text white
+  4 stats: Total Donors | Units Available | Lives Saved | Hospitals
+  Animated counter on scroll
+
+Blood Types Section:
+  Title: 'Blood Availability'
+  8 cards grid (4 col desktop, 2 mobile)
+  Each: blood type big text + units available + status badge
+  Status: Sufficient(green) | Low(amber) | Critical(red)
+
+How It Works:
+  3 steps horizontal (mobile: vertical)
+  Register → Donate → Save Lives
+  Icon + description each step
+
+Why Donate:
+  4 cards with icons: Saves Lives | Community | Free Health Check | Impact
+
+Urgent Needs:
+  Red banner. Critical blood types as badges.
+  Text: 'These blood types are critically needed'
+
+Testimonials:
+  3 donor quote cards: name + blood type + quote
+
+Footer:
+  3 cols: About | Quick Links | Contact
+  Copyright bottom
+
+2. About Page: Hero + mission + team placeholder
+3. Contact Page: Form (name,email,subject,message) + address cards. UI only.
+
+Colors: Primary #C0392B | BG #F8F9FA | Text #2C3E50
+Fully responsive.
+
+Test Checklist:
+•	Landing page loads without login?
+•	Navbar Login/Register buttons go to correct pages?
+•	Stats counter animates on scroll?
+•	All 8 blood type cards show?
+•	Mobile (375px): all sections stack correctly?
+•	Framer Motion animations run?
+
+Git:
+git add .
+git commit -m "Phase 4: Public pages complete"
+
+  PHASE 5 — Admin Pages  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: React 18, Tailwind v3, ShadCN, Recharts, Zustand
+Use AdminLayout wrapper for ALL admin pages.
+Use reusable components: StatCard, DataTable, Modal,
+Button, Badge, ConfirmDialog, BloodTypeBadge
+
+--- Admin Dashboard ---
+Row 1: 4 StatCards: Total Donors | Available Units | Pending Requests | Expired
+Row 2: Bar chart (units/blood type) + Pie chart (requests by status) - Recharts
+Row 3: Recent Donations table - last 5, no pagination, 'View All' link
+Row 4: Recent Requests table - last 5, 'View All' link
+Row 5: Low Stock alerts - show only when any type < 5 units
+
+--- Donors Page ---
+DataTable: Name|Blood Type|Age|Last Donation|Eligible|Total Donations|Actions
+Search by name or blood type | Filter: All|Eligible|Not Eligible
+Actions: View | Edit | Delete
+Add Donor Modal: name,email,phone,blood_type,age,weight,address + zod validation
+View Modal: full profile + donation history
+Edit Modal: same form prefilled
+Delete: ConfirmDialog first
+Export CSV button
+
+--- Blood Inventory ---
+Top: 8 blood type summary cards with status badges
+Add Stock button → Modal: blood_type, units, collection_date
+Auto calculate expiry: collection_date + 42 days
+DataTable: Blood Type|Units|Collected|Expiry|Days Left|Status|Actions
+Expired rows: red background | Filter by blood type + status
+
+--- Blood Requests ---
+DataTable: Patient|Blood Type|Units|Urgency|Status|Required Date|Actions
+Urgency badges: Critical(red) | Urgent(amber) | Normal(blue)
+Filter by urgency|status|blood type
+Approve: select from inventory, deduct units
+Reject: modal with reason field
+
+--- Staff Management ---
+DataTable: Name|Email|Department|Shift|Actions
+Add Staff Modal: name,email,password,phone,department,shift
+Note: only admin creates staff
+
+--- Patients ---
+DataTable: Name|Blood Type|Medical Condition|Total Requests|Actions
+Actions: View | Delete
+
+--- Reports ---
+4 Tabs:
+  Tab 1 Monthly: line chart + year filter + table + Export PDF/CSV
+  Tab 2 Usage: pie chart + table + exports
+  Tab 3 Donors: bar chart top 10 + inactive donors table + exports
+  Tab 4 Expired: table only + exports
+
+--- Settings ---
+Admin profile edit (name, phone) | Change password form
+
+Test Checklist:
+•	Admin login → /admin/dashboard loads?
+•	4 StatCards render?
+•	Both charts render with data?
+•	Add Donor: form validation works? New row appears in table?
+•	Edit Donor: form is prefilled?
+•	Delete Donor: ConfirmDialog appears first?
+•	Inventory: expiry auto-calculates?
+•	Expired rows highlighted red?
+•	Reports: all 4 tabs work? CSV export works?
+•	Mobile: all pages scroll correctly?
+
+Git:
+git add .
+git commit -m "Phase 5: Admin pages complete"
+
+  PHASE 6 — Staff Pages  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: React 18, Tailwind v3, ShadCN, Zustand
+Use StaffLayout wrapper. Use all reusable components.
+
+--- Staff Dashboard ---
+4 StatCards: Donations Today | Pending Tests | Requests Pending | Low Stock
+Recent activity table: last 10 donations by this staff member
+
+--- Register Donor ---
+Search bar: find existing donor by email/phone
+If exists: show profile → option to go to Record Donation
+If not: show registration form:
+  name, email, phone, blood_type, age, weight, address
+  Medical history checkboxes:
+    Heart disease | Diabetes | Recent surgery |
+    Tattoo last 6 months | Recent illness
+  Consent checkbox (required to submit)
+On success: redirect to Record Donation with donor prefilled
+
+--- Record Donation ---
+Step 1: Select donor (search by name/ID)
+  Show donor card: name, blood type, eligible status
+  If NOT eligible: show next eligible date, BLOCK submission
+Step 2: Enter donation details
+  units: 1 or 2 only | date | notes
+  Submit → status = pending
+
+--- Test Results ---
+Table: all donations with status = pending
+  Columns: Donor|Blood Type|Date|Units|Actions
+Enter Results Modal:
+  5 checkboxes: HIV|Hepatitis B|Hepatitis C|Malaria|Syphilis
+  All clear → approved → auto add to blood_inventory
+    Set donor next_eligible_date = today + 90 days
+    Set donor is_eligible = false
+  Any positive → rejected → create notification for donor
+ConfirmDialog before final submit
+
+--- Manage Requests ---
+DataTable: pending + under_review requests
+  Columns: Patient|Blood Type|Units|Urgency|Status|Date
+  Filter by urgency
+Actions: Review→under_review | Approve→deduct inventory |
+         Reject→reason | Fulfill→mark fulfilled
+
+Test Checklist:
+•	Staff login → /staff/dashboard loads?
+•	Existing donor search finds correct record?
+•	Ineligible donor: submission blocked, next date shown?
+•	Units field: only 1 or 2 accepted?
+•	All tests clear → status approved + inventory updated?
+•	Any test positive → rejected + donor notified?
+•	Staff cannot access /admin/* pages?
+
+Git:
+git add .
+git commit -m "Phase 6: Staff pages complete"
+
+  PHASE 7 — Donor Pages  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: React 18, Tailwind v3, ShadCN, jsPDF
+Use DonorLayout wrapper.
+
+--- Donor Dashboard ---
+Welcome banner: 'Welcome back, [Name]' + blood type badge
+BG: gradient red
+3 info cards:
+  Next Eligible Date: date + countdown days
+    Eligible now → green badge 'You can donate now!'
+    Not eligible → amber badge + days remaining
+  Total Donations: count
+  Last Donation: date
+Impact: 'You have helped [X] patients'
+Quick buttons: View History | Download Certificate
+
+--- Donation History ---
+DataTable: Date|Blood Type|Units|Status|Certificate
+Status badge: Approved(green)|Rejected(red)|Pending(amber)
+Certificate col: download button (approved only)
+Filter by year dropdown | Search by date range
+
+--- Certificate ---
+Select donation dropdown (approved only)
+Preview on page:
+  BloodLink logo | 'Certificate of Blood Donation' heading
+  Donor name (large) | Blood type | Date | Units
+  'Thank you for saving lives' | Hospital stamp placeholder
+Download as PDF button using jsPDF
+
+--- Profile ---
+View profile | Edit: name, phone, address (email cannot change)
+Change password (separate form)
+
+Test Checklist:
+•	Donor login → /donor/dashboard loads?
+•	Next eligible date calculates correctly?
+•	Eligible/ineligible badge shows correctly?
+•	Certificate: only approved donations in dropdown?
+•	PDF downloads and has correct info?
+•	Profile edit saves correctly?
+•	Donor cannot access /admin or /staff pages?
+
+Git:
+git add .
+git commit -m "Phase 7: Donor pages complete"
+
+  PHASE 8 — Patient Pages  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: React 18, Tailwind v3, ShadCN, Zustand
+Use PatientLayout wrapper.
+
+--- Patient Dashboard ---
+Welcome card: name + blood type badge
+3 StatCards: Total Requests | Approved | Pending
+Recent requests table: last 5, status badge, 'View All' link
+
+--- Submit Request ---
+Form:
+  blood_type: dropdown | units: number min 1
+  urgency: radio cards (Critical=red | Urgent=amber | Normal=blue)
+  condition: textarea min 10 chars
+  required_date: date picker, no past dates
+Validation: react-hook-form + zod
+ConfirmDialog before submit
+Success: toast + redirect to Track Request
+
+--- Track Request ---
+DataTable: Blood Type|Units|Urgency|Status|Required Date|Submitted
+Click row → Detail Modal:
+  All request info
+  Status timeline visual:
+    Pending → Under Review → Approved → Fulfilled
+    Each step: icon + date if completed
+  If rejected: rejection reason in red Alert
+
+--- Profile ---
+View + edit: name, phone
+Blood type display (cannot change)
+Medical condition edit | Change password
+
+Test Checklist:
+•	Patient login → /patient/dashboard loads?
+•	Past date blocked in required_date?
+•	Urgency radio cards show correct colors?
+•	ConfirmDialog appears before submit?
+•	After submit: redirects to Track Request?
+•	Status timeline shows correct stages?
+•	Rejected request shows reason in red?
+•	Patient cannot see other patients' requests?
+
+Git:
+git add .
+git commit -m "Phase 8: Patient pages complete"
+
+  PHASE 9 — Backend API (Node + Express)  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Tech: Node.js, Express, Supabase JS (@supabase/supabase-js)
+
+Setup:
+  Express app with: cors(), express.json(), helmet(), morgan(), dotenv
+  Env: SUPABASE_URL, SUPABASE_SERVICE_KEY, PORT=5000
+
+Middleware (apply in this order):
+1. cors()
+2. express.json()
+3. authMiddleware.js:
+   Extract JWT from Authorization header
+   Verify with Supabase | Attach user to req.user
+   Invalid → 401
+4. roleMiddleware.js:
+   roleMiddleware('admin') or roleMiddleware('admin','staff')
+   Wrong role → 403
+5. errorHandler.js:
+   Catch all errors | Return standard error format
+
+Response format - ALL routes:
+  Success: { success:true, message, data }
+  Paginated: { success:true, data, pagination:{total,page,limit,totalPages} }
+  Error: { success:false, message, error }
+  Validation: { success:false, message, errors:[{field,message}] }
+
+Routes:
+
+AUTH /api/auth:
+  POST /login → Supabase signInWithPassword
+  POST /signup → Supabase signUp + insert to users table
+  POST /logout → Supabase signOut
+  GET /me → return req.user
+
+DONORS /api/donors [auth required]:
+  GET / → paginated, search name/blood_type [admin,staff]
+  GET /:id [admin,staff,own donor]
+  POST / [admin,staff]
+  PUT /:id [admin,staff]
+  DELETE /:id [admin only]
+  GET /:id/history [admin,staff,own donor]
+
+DONATIONS /api/donations [auth required]:
+  GET / filter by status [admin,staff]
+  GET /:id [admin,staff]
+  POST / record new [staff]
+  PUT /:id/test-result [staff]:
+    approved → auto insert to blood_inventory
+    rejected → create notification for donor
+
+INVENTORY /api/inventory [auth required]:
+  GET / filter by blood_type/status [all roles]
+  GET /low-stock → types below 5 units [admin,staff]
+  POST / add stock [admin,staff]
+  PUT /:id [admin]
+  DELETE /:id [admin]
+
+REQUESTS /api/requests [auth required]:
+  GET / → all [admin,staff] or own [patient]
+  GET /:id [admin,staff,own patient]
+  POST / [patient]
+  PUT /:id/status [admin,staff]:
+    approved → deduct from blood_inventory
+
+STAFF /api/staff [admin only]:
+  GET / | POST / | PUT /:id | DELETE /:id
+
+NOTIFICATIONS /api/notifications [auth required]:
+  GET / → own notifications
+  PUT /:id/read | PUT /read-all
+
+REPORTS /api/reports [admin only]:
+  GET /monthly → donations grouped by month + year param
+  GET /inventory → stock + usage stats
+  GET /donors → top donors + inactive list
+  GET /expired → expired inventory log
+
+Test Checklist (use Postman or Thunder Client):
+•	POST /api/auth/login valid credentials → token returned?
+•	POST /api/auth/login wrong credentials → 401?
+•	GET /api/auth/me with token → user info returned?
+•	GET /api/auth/me without token → 401?
+•	GET /api/donors with admin token → list returned?
+•	GET /api/donors with donor token → 403?
+•	POST /api/donors missing field → validation error?
+•	DELETE /api/donors/:id with staff token → 403?
+•	PUT /api/donations/:id/test-result approved → inventory updated?
+•	Every response has 'success' field?
+•	Paginated responses have 'pagination' object?
+
+Git:
+git add .
+git commit -m "Phase 9: Backend API complete"
+
+  PHASE 10 — Integration + Polish  
+
+Prompt to give AI:
+Context: Blood Bank Management System
+Phases 1-9 are all complete. Now do final integration.
+
+1. Connect all frontend to backend:
+   Every page fetches real data from Express API via axiosInstance
+   No hardcoded/mock data anywhere
+
+2. Expand Zustand stores:
+   inventoryStore: fetchInventory() from /api/inventory
+   notificationStore: fetchNotifications() + poll every 30 seconds
+
+3. Loading states everywhere:
+   Every data fetch → Skeleton or PageLoader
+   Every form submit → button loading state
+
+4. Error states everywhere:
+   Every failed API → Alert or toast
+   Network error → global handler in axiosInstance
+   401 → auto logout + /login redirect
+   403 → show permission denied page
+
+5. Empty states everywhere:
+   Every table/list has EmptyState component
+   Correct icon + message per context
+
+6. Responsive fixes:
+   Test every page at 375px
+   Sidebar: drawer on mobile
+   Tables: horizontal scroll on mobile
+   Cards: stack on mobile
+
+7. Notifications:
+   Bell fetches real data | Mark as read works
+   Poll every 30 seconds
+
+8. Final verification:
+   All forms validate | All role protections work
+   No console errors | All charts render with real data
+   CSV export works | PDF certificate generates
+
+Final End-to-End Test:
+•	Register new donor → login → dashboard shows correct info?
+•	Staff: register donor → record donation → enter test results → inventory updated?
+•	Patient: submit request → staff approves → patient sees status update?
+•	Admin: reports show real data?
+•	PDF certificate downloads with correct info?
+•	CSV export downloads correctly?
+•	All pages load correctly on mobile (375px)?
+•	Notification bell shows unread count?
+•	No console errors on any page?
+•	No broken routes or 404s?
+
+Security Final Check:
+•	Admin page: donor/patient/staff cannot access?
+•	Patient: cannot see another patient's requests?
+•	No token: all protected routes redirect to /login?
+
+Final Git:
+git add .
+git commit -m "Phase 10: Full integration + polish complete"
+git tag v1.0.0
+
+
+Phase Summary
+Phase	What You Build	Git Message
+1	Setup + DB + .env + folder structure	Phase 1: Project setup complete
+2	Auth + protected routes + Zustand authStore	Phase 2: Auth system complete
+3	All reusable components + ErrorBoundary	Phase 3: Components complete
+4	Landing page + public pages	Phase 4: Public pages complete
+5	All admin pages (8 pages)	Phase 5: Admin pages complete
+6	All staff pages (5 pages)	Phase 6: Staff pages complete
+7	All donor pages (4 pages)	Phase 7: Donor pages complete
+8	All patient pages (4 pages)	Phase 8: Patient pages complete
+9	Full backend REST API	Phase 9: Backend API complete
+10	Integration + polish + final testing	Phase 10: Complete — v1.0.0
+
+
+GOLDEN RULE: One phase at a time. Test before commit. Commit before next phase.

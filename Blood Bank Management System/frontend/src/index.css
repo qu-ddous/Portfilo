@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased text-[#2C3E50] bg-[#F8F9FA];
+  }
+}
+
+@layer utilities {
+  .animate-shine {
+    animation: shine 1.5s ease-in-out infinite;
+  }
+  @keyframes shine {
+    0% {
+      transform: translateX(-150%) skewX(-45deg);
+    }
+    100% {
+      transform: translateX(250%) skewX(-45deg);
+    }
+  }
+}

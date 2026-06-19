@@ -1,0 +1,561 @@
+BloodLink
+Missing Gaps — Deep Technical Reference
+Data Flow | Business Logic | Validation | Security | Error Handling | Notifications
+
+1. Data Flow — Frontend → Backend → DB
+Every feature follows this exact path. Never skip a step.
+
+LOGIN FLOW
+User enters email + password
+    ↓
+Frontend: react-hook-form validates (email format, password min 6)
+    ↓
+API call: POST /api/auth/login { email, password }
+    ↓
+Backend: Supabase signInWithPassword(email, password)
+    ↓
+Supabase returns: { session: { access_token, user } }
+    ↓
+Backend: SELECT role FROM users WHERE id = user.id
+    ↓
+Backend returns: { success:true, data:{ token, user:{ id,name,email,role } } }
+    ↓
+Frontend: authStore.setUser({ token, user })
+    ↓
+Frontend: axiosInstance.defaults.headers.Authorization = 'Bearer ' + token
+    ↓
+Frontend: React Router redirect based on role
+  admin → /admin/dashboard
+  staff → /staff/dashboard
+  donor → /donor/dashboard
+  patient → /patient/dashboard
+
+DONOR REGISTRATION FLOW
+Staff fills registration form
+    ↓
+Frontend zod validation: all fields checked
+    ↓
+API call: POST /api/auth/signup { email, password, role:'donor', name, phone }
+    ↓
+Backend: Supabase signUp(email, password)
+    ↓
+Supabase returns: new user with id
+    ↓
+Backend: INSERT INTO users (id, name, email, role, phone)
+    ↓
+Backend: INSERT INTO donors (user_id, blood_type, age, weight, is_eligible:true)
+    ↓
+Backend returns: { success:true, message:'Donor registered', data: donor }
+    ↓
+Frontend: show success toast
+    ↓
+Frontend: redirect to Record Donation page with donor_id prefilled
+
+RECORD DONATION + TEST RESULT FLOW
+Staff selects donor + enters units + date
+    ↓
+Frontend checks: donor.is_eligible === true
+  If false → block form, show next_eligible_date
+    ↓
+API call: POST /api/donations { donor_id, blood_type, units, date, notes }
+    ↓
+Backend: INSERT INTO donations (status:'pending')
+    ↓
+Backend returns donation record
+    ↓
+--- Later: Staff enters test results ---
+    ↓
+API call: PUT /api/donations/:id/test-result { tests, final_status }
+    ↓
+Backend: UPDATE donations SET test_status = 'approved' or 'rejected'
+    ↓
+IF approved:
+  INSERT INTO blood_inventory (blood_type, units, collection_date, expiry_date)
+  UPDATE donors SET is_eligible=false, next_eligible_date = today + 90 days
+  inventoryStore.fetchInventory() — refresh frontend store
+    ↓
+IF rejected:
+  INSERT INTO notifications (user_id=donor.user_id, message='Donation rejected')
+  UPDATE donors SET is_eligible=false (temporarily, re-enable after 30 days)
+
+BLOOD REQUEST FLOW
+Patient submits request form
+    ↓
+Frontend zod validation
+    ↓
+Frontend: ConfirmDialog → user confirms
+    ↓
+API call: POST /api/requests { blood_type, units, urgency, condition, required_date }
+    ↓
+Backend: verify patient role
+    ↓
+Backend: CHECK blood_inventory WHERE blood_type = requested_type
+  If units_available < requested units → still create request, mark as 'pending'
+  (Staff will handle shortage manually)
+    ↓
+Backend: INSERT INTO blood_requests (status:'pending')
+    ↓
+Backend: INSERT INTO notifications (user_id=all_staff, message='New blood request')
+    ↓
+Frontend: success toast + redirect to Track Request
+    ↓
+--- Staff approves ---
+    ↓
+API call: PUT /api/requests/:id/status { status:'approved', inventory_id }
+    ↓
+Backend: UPDATE blood_requests SET status='approved'
+Backend: UPDATE blood_inventory SET units = units - requested_units
+Backend: INSERT INTO notifications (user_id=patient.user_id, message='Request approved')
+    ↓
+Frontend: notificationStore refreshes → patient sees update
+
+INVENTORY UPDATE → UI REFLECT FLOW
+Any inventory change (add stock / approve request / expire)
+    ↓
+Backend updates blood_inventory table
+    ↓
+Backend checks: any blood_type units < 5?
+  Yes → INSERT notification for admin + staff
+    ↓
+Frontend: after any inventory action →
+  inventoryStore.fetchInventory() called
+    ↓
+inventoryStore updates: inventory[] + lowStockTypes[]
+    ↓
+All components using inventoryStore re-render automatically
+  Dashboard stat card updates
+  Low stock alert shows/hides
+  Blood type availability cards update
+
+
+2. Validation Rules — Deep Level
+
+Donor Registration Validation
+Field	Rule	Error Message
+name	Required. Min 3 chars. Letters only.	Name must be at least 3 characters
+email	Required. Valid email format. Unique in DB.	Valid email required / Email already registered
+phone	Required. Exactly 11 digits. Numbers only.	Phone must be 11 digits
+blood_type	Required. Must be one of 8 valid types.	Select a valid blood type
+age	Required. Min 18, Max 65. Integer only.	Donor must be between 18 and 65 years old
+weight	Required. Min 50kg. Number only.	Donor must weigh at least 50kg to donate
+address	Required. Min 10 chars.	Please enter a complete address
+consent	Must be checked (true).	Consent is required to proceed
+medical_history	If heart disease or diabetes checked → add warning note, still allow	Warning shown, not blocking
+
+Donation Recording Validation
+Field	Rule	Error Message
+donor_id	Required. Donor must exist in DB.	Donor not found
+donor eligibility	is_eligible must be true. Check before showing form.	Donor not eligible. Next eligible: [date]
+units	Required. Only 1 or 2 accepted. Integer.	Units must be 1 or 2
+date	Required. Cannot be future date. Cannot be more than 7 days past.	Invalid donation date
+notes	Optional. Max 500 chars if provided.	Notes too long
+
+Blood Request Validation
+Field	Rule	Error Message
+blood_type	Required. Must be one of 8 valid types.	Select a valid blood type
+units	Required. Min 1, Max 10. Integer.	Units must be between 1 and 10
+urgency	Required. Must be: normal / urgent / critical.	Select urgency level
+condition	Required. Min 10 chars. Max 1000 chars.	Please describe the medical condition
+required_date	Required. Cannot be in the past.	Required date cannot be in the past
+duplicate	Patient cannot have 2 pending requests for same blood type.	You already have a pending request for this blood type
+
+Password Validation (All Users)
+•	Minimum 8 characters
+•	At least 1 uppercase letter
+•	At least 1 number
+•	At least 1 special character (!@#$%^&*)
+•	Cannot be same as email
+•	Confirm password must match exactly
+
+Backend Validation (Express)
+Never trust frontend-only validation. Backend must re-validate everything.
+•	Use express-validator or zod on backend too
+•	Check unique constraints: email, phone
+•	Check foreign keys exist before insert
+•	Sanitize all string inputs (trim whitespace, escape HTML)
+•	Reject any extra fields not in schema (strict mode)
+
+
+3. Business Logic — The Real Rules
+
+Donor Eligibility Rules
+These rules decide if a donor can donate. Check ALL before allowing donation.
+
+Rule	Condition	Action if Failed
+Age	Must be 18–65 years old	Block registration entirely
+Weight	Must be minimum 50kg	Block registration entirely
+Donation Gap	Must wait 90 days after last approved donation	Show next_eligible_date, block form
+Recent Rejection	If last donation rejected, wait 30 days before retrying	Show message: 'Your last donation had issues. Please consult a doctor.'
+Medical History	Heart disease or recent surgery = flag for doctor review	Allow registration, add review_required flag
+Tattoo / Piercing	Within last 6 months = ineligible	Block donation for 6 months from tattoo date
+Recent Illness	Fever/infection in last 2 weeks = ineligible	Block until cleared
+Pregnancy	Pregnant donors = ineligible	Block, no time limit shown
+
+Blood Expiry Rules
+•	Whole blood expires in 42 days from collection date
+•	expiry_date = collection_date + 42 days (calculated on backend, not frontend)
+•	Cron job or check on every inventory fetch: if expiry_date < today → status = 'expired'
+•	Expired blood CANNOT be assigned to any request
+•	Admin gets notification when blood expires
+•	Expired units are NOT deducted from inventory automatically — admin must confirm disposal
+
+// Backend: check expiry on every inventory read
+const today = new Date();
+inventory.forEach(item => {
+  const expiry = new Date(item.expiry_date);
+  const daysLeft = Math.floor((expiry - today) / (1000*60*60*24));
+  if (daysLeft < 0) item.status = 'expired';
+  else if (daysLeft <= 7) item.status = 'critical';  // expiring soon
+  else if (item.units < 5) item.status = 'low';
+  else item.status = 'sufficient';
+});
+
+Request Priority Logic
+When multiple requests exist for same blood type, this order is followed.
+
+Priority	Condition	Handled How
+1st — Critical Urgency	urgency = critical	Show at top of requests table with red badge
+2nd — Urgent	urgency = urgent	Show second with amber badge
+3rd — Normal + Earlier Date	urgency = normal, older required_date first	FIFO within normal urgency
+Override	Staff can manually change order with justification note	Staff enters reason in notes field
+
+// Backend: sort requests query
+SELECT * FROM blood_requests
+WHERE status = 'pending' OR status = 'under_review'
+ORDER BY
+  CASE urgency
+    WHEN 'critical' THEN 1
+    WHEN 'urgent' THEN 2
+    WHEN 'normal' THEN 3
+  END ASC,
+  required_date ASC
+
+Inventory Deduction Logic
+•	When request approved: deduct units from blood_inventory
+•	ONLY deduct from non-expired stock
+•	If same blood type has multiple inventory entries: deduct from OLDEST first (FIFO)
+•	If total available < requested units: BLOCK approval, show error to staff
+•	After deduction: check if remaining < 5 → trigger low stock notification
+
+// Backend: approve request
+async function approveRequest(requestId, bloodType, unitsNeeded) {
+  // Get available non-expired stock, oldest first
+  const stocks = await supabase
+    .from('blood_inventory')
+    .select('*')
+    .eq('blood_type', bloodType)
+    .neq('status', 'expired')
+    .gt('units', 0)
+    .order('collection_date', { ascending: true });
+
+  const totalAvailable = stocks.data.reduce((sum, s) => sum + s.units, 0);
+  if (totalAvailable < unitsNeeded) {
+    return { success: false, message: 'Insufficient stock' };
+  }
+
+  // Deduct FIFO
+  let remaining = unitsNeeded;
+  for (const stock of stocks.data) {
+    if (remaining <= 0) break;
+    const deduct = Math.min(stock.units, remaining);
+    await supabase.from('blood_inventory')
+      .update({ units: stock.units - deduct })
+      .eq('id', stock.id);
+    remaining -= deduct;
+  }
+
+  // Check low stock
+  const newTotal = totalAvailable - unitsNeeded;
+  if (newTotal < 5) { /* send notification */ }
+
+  return { success: true };
+}
+
+Eligibility Re-check Logic
+// Run this check every time donor data is fetched
+function updateEligibility(donor) {
+  const today = new Date();
+  const nextEligible = new Date(donor.next_eligible_date);
+
+  if (donor.next_eligible_date && today >= nextEligible) {
+    // Auto-mark eligible again
+    donor.is_eligible = true;
+    // Update in DB too
+    supabase.from('donors')
+      .update({ is_eligible: true })
+      .eq('id', donor.id);
+  }
+  return donor;
+}
+
+
+4. Notification Logic — When + Who
+
+Event	Trigger	Who Gets Notified	Message
+New blood request submitted	POST /api/requests	All staff + admin	New blood request: [BloodType] [Units] units - [Urgency]
+Request approved	PUT /api/requests/:id/status → approved	The patient who requested	Your blood request has been approved
+Request rejected	PUT /api/requests/:id/status → rejected	The patient	Your request was rejected: [reason]
+Request fulfilled	PUT /api/requests/:id/status → fulfilled	The patient	Blood has been delivered. Thank you.
+Donation test approved	PUT /api/donations/:id/test-result → approved	The donor	Your donation was approved. Thank you for saving lives!
+Donation test rejected	PUT /api/donations/:id/test-result → rejected	The donor	Unfortunately your donation could not be accepted. Please consult a doctor.
+Low stock alert	After any inventory deduction, units < 5	Admin + all staff	Low stock alert: [BloodType] has only [N] units remaining
+Blood expired	Daily check or on inventory fetch, expiry_date < today	Admin	[BloodType] blood units expired on [date]. Please dispose.
+Donor now eligible	When next_eligible_date passes	The donor	You are now eligible to donate again! Book an appointment.
+
+How to Insert a Notification (Backend)
+// Reusable notification helper
+async function createNotification(userId, message) {
+  await supabase.from('notifications').insert({
+    user_id: userId,
+    message: message,
+    is_read: false,
+    created_at: new Date().toISOString()
+  });
+}
+
+// Notify multiple users (e.g. all staff)
+async function notifyAllStaff(message) {
+  const staff = await supabase.from('users')
+    .select('id').eq('role', 'staff');
+  const adminUsers = await supabase.from('users')
+    .select('id').eq('role', 'admin');
+  const allIds = [...staff.data, ...adminUsers.data];
+  const inserts = allIds.map(u => ({
+    user_id: u.id, message, is_read: false
+  }));
+  await supabase.from('notifications').insert(inserts);
+}
+
+Frontend Polling
+// In notificationStore.js (Zustand)
+const useNotificationStore = create((set) => ({
+  notifications: [],
+  unreadCount: 0,
+
+  fetchNotifications: async () => {
+    const res = await axios.get('/api/notifications');
+    const data = res.data.data;
+    set({
+      notifications: data,
+      unreadCount: data.filter(n => !n.is_read).length
+    });
+  },
+
+  startPolling: () => {
+    // Call immediately, then every 30 seconds
+    useNotificationStore.getState().fetchNotifications();
+    return setInterval(() => {
+      useNotificationStore.getState().fetchNotifications();
+    }, 30000);
+  }
+}));
+
+// Start polling after login (in Dashboard component useEffect)
+useEffect(() => {
+  const interval = startPolling();
+  return () => clearInterval(interval); // cleanup on unmount
+}, []);
+
+
+5. Error Scenarios — Handle Every Case
+
+Inventory Errors
+Scenario	Where It Happens	Frontend Shows	Backend Returns
+Insufficient stock for request	Staff approves request	Error toast: 'Not enough stock. Only X units available.'	{ success:false, message:'Insufficient stock', available:N }
+Blood type not in inventory	Staff approves request	Error toast: 'No stock available for this blood type.'	{ success:false, error:'NO_STOCK' }
+Expired blood in assignment	Staff tries to assign expired units	Error toast: 'This stock has expired and cannot be used.'	{ success:false, error:'STOCK_EXPIRED' }
+Negative units	Add stock form	Form error: 'Units must be positive'	400 validation error
+
+Donor Errors
+Scenario	Where	Frontend Shows	Backend Returns
+Duplicate email	Register donor	Form error: 'This email is already registered'	{ success:false, error:'DUPLICATE_EMAIL' }
+Duplicate phone	Register donor	Form error: 'This phone number already exists'	{ success:false, error:'DUPLICATE_PHONE' }
+Donor not eligible	Record donation	Block form + show next eligible date	{ success:false, error:'NOT_ELIGIBLE', next_date:'YYYY-MM-DD' }
+Delete donor with history	Admin deletes donor	ConfirmDialog: 'This donor has X donations. Deleting will also remove history. Confirm?'	Check before delete, warn if records exist
+
+Auth Errors
+Scenario	Frontend Behavior
+Wrong password	Error toast: 'Invalid email or password'
+Email not verified	Error toast: 'Please verify your email first'
+Account not found	Error toast: 'No account found with this email'
+Token expired (401)	Auto logout + redirect to /login + toast: 'Session expired. Please login again.'
+No permission (403)	Show 403 page: 'You do not have permission to access this page' + Go Back button
+Network error	Toast: 'Connection failed. Check your internet and try again.'
+Server error (500)	Toast: 'Something went wrong on our end. Please try again.'
+
+Request Errors
+Scenario	Frontend Shows
+Duplicate pending request	Form error: 'You already have a pending request for this blood type'
+Required date in past	Form error: 'Required date cannot be in the past'
+Units too high	Form error: 'Maximum 10 units per request'
+Request not found	Show 404 state inside page: 'Request not found'
+Status already changed	Toast: 'This request has already been processed'
+
+Global Error Handler (axiosInstance)
+// src/api/axiosInstance.js
+import axios from 'axios';
+import { useAuthStore } from '../store/authStore';
+import { toast } from 'sonner';
+
+const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+});
+
+// Auto attach JWT
+axiosInstance.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token;
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Global error handling
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const message = error.response?.data?.message;
+
+    if (status === 401) {
+      useAuthStore.getState().clearUser();
+      window.location.href = '/login';
+      toast.error('Session expired. Please login again.');
+    } else if (status === 403) {
+      toast.error('You do not have permission.');
+    } else if (status === 404) {
+      toast.error('Resource not found.');
+    } else if (status >= 500) {
+      toast.error('Server error. Please try again.');
+    } else if (!error.response) {
+      toast.error('Connection failed. Check your internet.');
+    } else {
+      toast.error(message || 'Something went wrong.');
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export default axiosInstance;
+
+
+6. Security Layer
+
+Password Rules (Frontend + Backend)
+•	Minimum 8 characters
+•	At least 1 uppercase letter (A-Z)
+•	At least 1 number (0-9)
+•	At least 1 special character (!@#$%^&*)
+•	Cannot match email address
+•	Confirm password must match
+
+// Zod password schema
+const passwordSchema = z.string()
+  .min(8, 'Minimum 8 characters')
+  .regex(/[A-Z]/, 'Must contain uppercase letter')
+  .regex(/[0-9]/, 'Must contain a number')
+  .regex(/[!@#$%^&*]/, 'Must contain special character');
+
+API Protection (Backend — Apply to ALL Routes)
+Protection	How to Implement	Why
+Rate Limiting	npm install express-rate-limit. 100 requests/15 min per IP. Login: 5 attempts/15 min.	Prevent brute force + abuse
+CORS	Allow only your frontend domain. Never use origin:'*' in production.	Block unknown domains
+Helmet.js	npm install helmet. Use helmet() middleware at top.	Sets secure HTTP headers
+Input Sanitization	npm install express-validator. Strip HTML from all string inputs.	Prevent XSS injection
+JWT Verification	Verify every token on every protected route. Never trust frontend role claims.	Prevent token tampering
+Role Check	Always check role from DB, not from JWT payload. JWT payload can be tampered.	Prevent privilege escalation
+SQL Injection	Use Supabase parameterized queries only. Never concatenate user input into queries.	Prevent DB attacks
+Sensitive Data	Never return password hashes. Never log tokens or passwords.	Data protection
+HTTPS Only	In production, force HTTPS. Set Strict-Transport-Security header via helmet.	Encrypt data in transit
+
+Rate Limiting Setup
+// npm install express-rate-limit
+const rateLimit = require('express-rate-limit');
+
+// General API limit
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 100,                    // 100 requests per window
+  message: { success:false, message:'Too many requests. Try again later.' }
+});
+
+// Strict login limit
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,                      // 5 attempts per 15 min
+  message: { success:false, message:'Too many login attempts. Wait 15 minutes.' }
+});
+
+// Apply
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', loginLimiter);
+
+Role Middleware (Never Trust Frontend)
+// WRONG — trusting JWT payload
+const role = req.user.role;  // ← can be tampered
+
+// CORRECT — always fetch from DB
+async function roleMiddleware(...allowedRoles) {
+  return async (req, res, next) => {
+    const { data: user } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', req.user.id)
+      .single();
+
+    if (!user || !allowedRoles.includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+    req.userRole = user.role;
+    next();
+  };
+}
+
+// Usage
+router.delete('/donors/:id',
+  authMiddleware,
+  roleMiddleware('admin'),   // ← only admin
+  deleteDonor
+);
+
+Frontend Security Rules
+•	Never store raw JWT in localStorage — use Supabase session (httpOnly cookie preferred)
+•	Never expose SUPABASE_SERVICE_KEY on frontend — only use anon key
+•	Never show admin/staff UI elements to donor/patient roles — check role before rendering
+•	All sensitive routes: check role on BOTH frontend (redirect) AND backend (403)
+•	No sensitive data in URL params — use POST body
+
+Data Ownership Checks (Per-Record Security)
+// Patient can only see OWN requests
+router.get('/requests', authMiddleware, async (req, res) => {
+  let query = supabase.from('blood_requests').select('*');
+
+  if (req.userRole === 'patient') {
+    // Only own requests
+    const patient = await supabase.from('patients')
+      .select('id').eq('user_id', req.user.id).single();
+    query = query.eq('patient_id', patient.data.id);
+  }
+  // admin + staff see all
+
+  const { data, error } = await query;
+  res.json({ success: true, data });
+});
+
+
+Summary — What to Add in Each Phase
+Phase	Add From This Document
+Phase 1	Nothing extra — setup only
+Phase 2	Password validation rules (zod schema). axiosInstance with interceptors.
+Phase 3	axiosInstance global error handler. ErrorBoundary.
+Phase 5 (Admin)	Business logic: inventory deduction (FIFO). Expiry check on fetch. Low stock notification trigger.
+Phase 6 (Staff)	Donor eligibility ALL rules. Auto re-check eligibility on fetch. Notification inserts after test results.
+Phase 7 (Donor)	Eligibility auto-update logic in useEffect.
+Phase 8 (Patient)	Duplicate request check. Past date block. Priority display in Track Request.
+Phase 9 (Backend)	Rate limiting. Helmet. Role middleware from DB (not JWT). Data ownership checks. All notification inserts. FIFO deduction logic.
+Phase 10	End-to-end test all error scenarios. Verify all notifications trigger. Verify security on all routes.
+
+
+These are not optional. Miss any of these and the system breaks in production.
