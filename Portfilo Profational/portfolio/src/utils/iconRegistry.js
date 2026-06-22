@@ -1,0 +1,83 @@
+// A small, explicit registry of lucide-react icons.
+//
+// We import only the icons actually used across skills.js, services.js,
+// and techIcons.js (named imports, not `import * as Icons`), so the
+// bundler can tree-shake the rest of the 1000+ icon library out of the
+// production build. Add a new line here whenever a new icon name is
+// referenced in the data files.
+
+import {
+  Atom,
+  BarChart3,
+  Bell,
+  Box,
+  Boxes,
+  Brain,
+  Calculator,
+  CalendarClock,
+  Component,
+  Database,
+  FileSpreadsheet,
+  FileText,
+  Flame,
+  GitBranch,
+  Globe,
+  HardDrive,
+  Hash,
+  Layers,
+  Layers3,
+  Lock,
+  MapPin,
+  Mic,
+  Monitor,
+  Move3d,
+  Server,
+  ShieldCheck,
+  Smartphone,
+  Speaker,
+  Triangle,
+  Webhook,
+  Wind,
+  Workflow,
+  Zap,
+} from "lucide-react";
+
+export const iconRegistry = {
+  Atom,
+  BarChart3,
+  Bell,
+  Box,
+  Boxes,
+  Brain,
+  Calculator,
+  CalendarClock,
+  Component,
+  Database,
+  FileSpreadsheet,
+  FileText,
+  Flame,
+  GitBranch,
+  Globe,
+  HardDrive,
+  Hash,
+  Layers,
+  Layers3,
+  Lock,
+  MapPin,
+  Mic,
+  Monitor,
+  Move3d,
+  Server,
+  ShieldCheck,
+  Smartphone,
+  Speaker,
+  Triangle,
+  Webhook,
+  Wind,
+  Workflow,
+  Zap,
+};
+
+export function getIcon(name) {
+  return iconRegistry[name] || Box;
+}
