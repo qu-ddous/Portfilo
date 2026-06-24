@@ -90,11 +90,7 @@ export default function Hero() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mt-6 text-ivory-muted text-lg md:text-xl max-w-xl leading-relaxed"
         >
-<<<<<<< HEAD
           I'm Quddous - a Software Engineer building production-grade web,
-=======
-          I'm Quddous ” an AI Driven Software Engineer building production-grade web,
->>>>>>> 3c6a136fca141f1cf59aacb4cb5a96f72b0fc2fb
           mobile, and desktop applications. From admin dashboards to
           encrypted vaults, I turn complex requirements into software people
           actually trust.
