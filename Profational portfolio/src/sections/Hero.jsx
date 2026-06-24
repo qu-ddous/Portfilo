@@ -81,7 +81,7 @@ export default function Hero() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="font-display font-bold text-2xl sm:text-5xl md:text-6xl lg:text-7xl text-ivory leading-[1.1] sm:leading-[1.05] max-w-4xl text-balance"
         >
-          Software Engineer <span className="text-lime">AI Driven</span>  Development
+          Software Engineer
         </motion.h1>
 
         <motion.p
@@ -90,7 +90,7 @@ export default function Hero() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mt-6 text-ivory-muted text-lg md:text-xl max-w-xl leading-relaxed"
         >
-          I'm Quddous â€” an AI Driven Software Engineer building production-grade web,
+          I'm Quddous - a Software Engineer building production-grade web,
           mobile, and desktop applications. From admin dashboards to
           encrypted vaults, I turn complex requirements into software people
           actually trust.
