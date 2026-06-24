@@ -63,7 +63,7 @@ export default function CVProfile() {
                   <div className="absolute -inset-1 bg-gradient-to-r from-lime to-teal rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000" />
                   <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-ink">
                     <img
-                      src="/profile.jpg"
+                      src="/profile.webp"
                       alt="Muhammad Quddous"
                       className="w-full h-full object-cover"
                     />
