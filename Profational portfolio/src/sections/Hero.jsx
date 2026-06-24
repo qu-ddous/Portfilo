@@ -10,13 +10,25 @@ export default function Hero() {
   const isLight = theme === "light";
   const navigate = useNavigate();
   
-  const handleDownloadCV = () => {
-    const link = document.createElement("a");
-    link.href = "/Quddous_CV.pdf";
-    link.download = "Quddous_CV.pdf";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  const handleDownloadCV = async () => {
+    const { jsPDF } = await import("jspdf");
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = "/Quddous_CV.jpg";
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+
+    const pdf = new jsPDF({
+      orientation: img.width > img.height ? "landscape" : "portrait",
+      unit: "pt",
+      format: [img.width, img.height],
+    });
+
+    pdf.addImage(img, "JPEG", 0, 0, img.width, img.height, undefined, "NONE");
+    pdf.save("Quddous_CV.pdf");
   };
   
   const scrollTo = (href) => {
