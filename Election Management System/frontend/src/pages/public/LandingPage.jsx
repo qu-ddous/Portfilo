@@ -15,10 +15,10 @@ export default function LandingPage() {
     queryKey: ['elections', statusFilter],
     queryFn: async () => {
       const status = statusFilter === 'all' ? '' : statusFilter;
-      const response = await api.get('/elections', {
+      const result = await api.get('/elections', {
         params: { status, limit: 50 }
       });
-      return response.data || [];
+      return result.data || [];
     }
   });
 
