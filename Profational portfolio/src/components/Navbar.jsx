@@ -42,7 +42,7 @@ export default function Navbar() {
   const brandClass = isHeroOverlay
     ? "font-display font-bold text-xl text-white tracking-tight flex items-center gap-2 flex-shrink-0"
     : "font-display font-bold text-xl text-ivory tracking-tight flex items-center gap-2 flex-shrink-0";
-  const mobileMenuButtonClass = isHeroOverlay ? "text-white" : "text-ivory";
+  const mobileMenuButtonClass = iconButtonClass;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
