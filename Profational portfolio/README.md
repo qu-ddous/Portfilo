@@ -1,4 +1,9 @@
+
 # Quddous — Portfolio
+
+https://quddous-portfolio-live.vercel.app
+
+https://quddous-portfolio.netlify.app
 
 Professional portfolio site built with React, Vite, Tailwind CSS, and
 Framer Motion. Single scroll page (Hero → About → Skills → Projects →
