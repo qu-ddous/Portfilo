@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const visualConfig = {
   "smart-labor-platform": {
@@ -106,16 +106,12 @@ function ProjectPlaceholder({ project, className = "" }) {
   );
 }
 
-export default function ProjectVisual({
+function ProjectVisualContent({
   project,
   imageClassName = "",
   fallbackClassName = "",
 }) {
   const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    setHasError(false);
-  }, [project.id, project.image]);
 
   if (project.image && !hasError) {
     return (
@@ -129,4 +125,8 @@ export default function ProjectVisual({
   }
 
   return <ProjectPlaceholder project={project} className={fallbackClassName} />;
+}
+
+export default function ProjectVisual(props) {
+  return <ProjectVisualContent key={`${props.project.id}-${props.project.image ?? ""}`} {...props} />;
 }

@@ -27,12 +27,6 @@ function ProjectLightbox({
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const touchStartX = useRef(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    setActiveIndex(initialIndex);
-  }, [initialIndex, isOpen]);
-
   const goToPrevious = useCallback(() => {
     setActiveIndex((current) => (current - 1 + images.length) % images.length);
   }, [images.length]);
@@ -164,8 +158,21 @@ export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const project = getProjectById(id);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxState, setLightboxState] = useState({
+    projectId: id,
+    index: 0,
+    isOpen: false,
+  });
+  const lightboxIndex = lightboxState.projectId === id ? lightboxState.index : 0;
+  const isLightboxOpen = lightboxState.projectId === id && lightboxState.isOpen;
+
+  const openLightbox = (index) => {
+    setLightboxState({ projectId: id, index, isOpen: true });
+  };
+
+  const closeLightbox = () => {
+    setLightboxState((current) => ({ ...current, isOpen: false }));
+  };
 
   const galleryImages = useMemo(() => {
     if (!project) return [];
@@ -177,10 +184,6 @@ export default function ProjectDetail() {
     window.scrollTo(0, 0);
   }, [id]);
 
-  useEffect(() => {
-    setIsLightboxOpen(false);
-    setLightboxIndex(0);
-  }, [id]);
 
   if (!project) {
     return (
@@ -292,8 +295,7 @@ export default function ProjectDetail() {
               <button
                 type="button"
                 onClick={() => {
-                  setLightboxIndex(0);
-                  setIsLightboxOpen(true);
+                  openLightbox(0);
                 }}
                 className="group flex w-full cursor-zoom-in items-center justify-center rounded-xl"
                 aria-label={`Open ${project.title} preview`}
@@ -338,8 +340,7 @@ export default function ProjectDetail() {
                     type="button"
                     key={idx}
                     onClick={() => {
-                      setLightboxIndex(idx);
-                      setIsLightboxOpen(true);
+                      openLightbox(idx);
                     }}
                     className="project-gallery-item group block w-full overflow-hidden rounded-2xl border border-ink-line bg-ink-surface p-3 text-left transition duration-300 hover:border-lime/40 hover:bg-ink-raised"
                     aria-label={`Open screenshot ${idx + 1} for ${project.title}`}
@@ -426,11 +427,12 @@ export default function ProjectDetail() {
       </main>
       <Footer />
       <ProjectLightbox
+        key={`${id}-${lightboxIndex}-${isLightboxOpen}`}
         isOpen={isLightboxOpen}
         images={galleryImages}
         initialIndex={lightboxIndex}
         projectTitle={project.title}
-        onClose={() => setIsLightboxOpen(false)}
+        onClose={closeLightbox}
       />
     </>
   );
