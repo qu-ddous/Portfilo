@@ -81,7 +81,7 @@ export default function Hero() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="font-display font-bold text-2xl sm:text-5xl md:text-6xl lg:text-7xl text-ivory leading-[1.1] sm:leading-[1.05] max-w-4xl text-balance"
         >
-          Software Engineer
+          Software Engineer <span className="text-lime">AI Driven</span> Development
         </motion.h1>
 
         <motion.p
