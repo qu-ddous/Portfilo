@@ -3,11 +3,7 @@ import {
   Mail,
   MapPin,
   MessageCircle,
-  Briefcase,
-  GraduationCap,
-  Zap,
   CheckCircle2,
-  Trophy,
 } from "lucide-react";
 import SectionHeading from "../components/SectionHeading";
 import { GithubIcon, LinkedinIcon } from "../components/BrandIcons";
@@ -139,7 +135,7 @@ export default function CVProfile() {
                   SKILLS
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {skills.map((skill, i) => (
+                  {skills.map((skill) => (
                     <span
                       key={skill}
                       className="px-3 py-1.5 rounded-full bg-ink border border-ink-line text-ivory-muted text-sm hover:border-lime hover:text-lime transition-all"

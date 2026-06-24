@@ -1,9 +1,8 @@
 import { motion } from "framer-motion";
-import { ArrowDown, ArrowRight, Download, Eye } from "lucide-react";
-import heroImg from "../assets/images/hero-original-hd.jpeg";
+import { ArrowDown, Download, Eye } from "lucide-react";
+import heroImg from "../assets/images/hero-original-hd.webp";
 import { useTheme } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
-import { jsPDF } from "jspdf";
 
 
 export default function Hero() {
@@ -11,25 +10,13 @@ export default function Hero() {
   const isLight = theme === "light";
   const navigate = useNavigate();
   
-  const handleDownloadCV = async () => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = "/Quddous_CV.jpg";
-    
-    await new Promise((resolve) => {
-      img.onload = resolve;
-    });
-    
-    console.log("Image dimensions:", img.width, "x", img.height);
-
-    const pdf = new jsPDF({
-      orientation: img.width > img.height ? "landscape" : "portrait",
-      unit: "pt",
-      format: [img.width, img.height]
-    });
-
-    pdf.addImage(img, "JPEG", 0, 0, img.width, img.height, undefined, "NONE");
-    pdf.save("Quddous_CV.pdf");
+  const handleDownloadCV = () => {
+    const link = document.createElement("a");
+    link.href = "/Quddous_CV.pdf";
+    link.download = "Quddous_CV.pdf";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
   
   const scrollTo = (href) => {
@@ -103,7 +90,7 @@ export default function Hero() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mt-6 text-ivory-muted text-lg md:text-xl max-w-xl leading-relaxed"
         >
-          I'm Quddous — an AI Driven Software Engineer building production-grade web,
+          I'm Quddous â€” an AI Driven Software Engineer building production-grade web,
           mobile, and desktop applications. From admin dashboards to
           encrypted vaults, I turn complex requirements into software people
           actually trust.
@@ -152,3 +139,4 @@ export default function Hero() {
     </section>
   );
 }
+
