@@ -47,13 +47,33 @@ export default function Hero() {
           src={heroImg}
           alt="Quddous, software engineer, working outdoors at night"
           className={`w-full h-full object-cover object-[65%_center] sm:object-[75%_center] scale-[1.02] ${isLight
-              ? "brightness-[0.95] contrast-[0.93] saturate-[0.9]"
+              ? "brightness-[0.94] contrast-[0.94] saturate-[0.88]"
               : "brightness-[0.88] contrast-[0.9] saturate-[0.84]"
             }`}
         />
+        {/* Theme-aware overlays keep the hero readable in both dark and light modes */}
+        <div
+          className={`absolute inset-0 ${isLight
+              ? "bg-gradient-to-r from-[#f6f1e7]/68 via-[#f6f1e7]/42 to-white/6"
+              : "bg-gradient-to-r from-black/78 via-black/42 to-black/8"
+            }`}
+        />
+        <div
+          className={`absolute inset-0 ${isLight
+              ? "bg-gradient-to-t from-[#f6f1e7]/22 via-white/5 to-white/10"
+              : "bg-gradient-to-t from-black/48 via-transparent to-black/22"
+            }`}
+        />
         {isLight && (
-          <div className="absolute inset-y-0 left-0 w-[48%] bg-gradient-to-r from-[#f6f1e7]/42 via-[#f6f1e7]/16 to-transparent" />
+          <div className="absolute inset-y-0 left-0 w-[60%] bg-gradient-to-r from-[#f6f1e7]/88 via-[#f6f1e7]/66 to-transparent" />
         )}
+        {/* Additional overlay to darken right side (only on larger screens) */}
+        <div
+          className={`absolute inset-0 ${isLight
+              ? "sm:bg-gradient-to-l sm:from-[#f6f1e7]/24 sm:via-transparent sm:to-transparent"
+              : "sm:bg-gradient-to-l sm:from-black/45 sm:via-transparent sm:to-transparent"
+            }`}
+        />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10 pt-28 pb-20 w-full">
